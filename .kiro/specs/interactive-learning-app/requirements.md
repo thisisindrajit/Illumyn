@@ -107,12 +107,12 @@ The Interactive Learning Experience Generator is an AI-powered application desig
 
 #### Acceptance Criteria
 
-1. WHEN a new user visits the application THEN the system SHALL offer options to create an account or continue as a guest.
-2. WHEN a user chooses to create an account THEN the system SHALL collect minimal required information (email, password).
-3. WHEN a user attempts to log in THEN the system SHALL authenticate credentials securely.
-4. WHEN a logged-in user generates content THEN the system SHALL associate the content with their account.
-5. WHEN a logged-in user accesses their account THEN the system SHALL display their saved content and preferences.
-6. WHEN a user requests to delete their account THEN the system SHALL provide a confirmation process and remove all associated data.
+1. WHEN a new user visits the application THEN the system SHALL offer options to create an account or continue as a guest through the NextJS Better Auth system.
+2. WHEN a user chooses to create an account THEN the NextJS Better Auth system SHALL handle user registration.
+3. WHEN a user attempts to log in THEN the NextJS Better Auth system SHALL authenticate credentials securely.
+4. WHEN a logged-in user generates content THEN the Spring Boot API SHALL associate the content with their account using the user ID from Better Auth.
+5. WHEN a logged-in user accesses their account THEN the system SHALL display their saved content and preferences retrieved from the Spring Boot API.
+6. WHEN a user requests to delete their account THEN the system SHALL provide a confirmation process and remove all associated data from both Better Auth and the Spring Boot API database.
 
 ### Requirement 9: Feedback and Improvement
 

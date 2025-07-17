@@ -8,23 +8,24 @@ This design document outlines the architecture, components, data models, and oth
 
 ## Architecture
 
-The application follows a modern, scalable architecture with clear separation of concerns:
+The application follows a modern, scalable architecture with clear separation of concerns between the NextJS frontend with Better Auth and the Spring Boot API backend:
 
 ```mermaid
 graph TD
-    Client[Client Application] <--> API[API Layer]
-    API <--> Auth[Authentication Service]
-    API <--> ContentGen[Content Generation Service]
-    API <--> UserMgmt[User Management Service]
-    API <--> Storage[Content Storage Service]
-    
+    Client[NextJS Client Application] <--> NextAuth[NextJS Better Auth]
+    Client <--> SpringAPI[Spring Boot API Layer]
+
+    SpringAPI <--> ContentGen[Content Generation Service]
+    SpringAPI <--> UserMgmt[User Management Service]
+    SpringAPI <--> Storage[Content Storage Service]
+
     ContentGen <--> AIEngine[AI Engine]
     ContentGen <--> InteractiveGen[Interactive Elements Generator]
     ContentGen <--> ContentAnalyzer[Content Analyzer]
-    
-    Storage <--> Database[(Database)]
+
+    Storage <--> PostgresDB[(PostgreSQL Database)]
     Storage <--> FileStore[(File Storage)]
-    
+
     subgraph External Services
         AIEngine <--> ExternalAI[External AI Services]
         ContentAnalyzer <--> ResearchDB[Research Databases]
@@ -33,11 +34,11 @@ graph TD
 
 ### Key Architectural Components:
 
-1. **Client Application**: A responsive React/TypeScript web application providing the user interface.
-2. **API Layer**: Spring Boot RESTful API endpoints handling client requests and orchestrating backend services.
-3. **Authentication Service**: Manages user authentication and authorization using Spring Security.
+1. **NextJS Client Application**: A responsive React/TypeScript web application providing the user interface.
+2. **NextJS Better Auth**: Handles user authentication, registration, and session management within the NextJS application.
+3. **Spring Boot API Layer**: RESTful API endpoints handling client requests and orchestrating backend services.
 4. **Content Generation Service**: Core service responsible for generating learning content.
-5. **User Management Service**: Handles user account operations and preference management.
+5. **User Management Service**: Handles user preference management and profile data (excluding authentication).
 6. **Content Storage Service**: Manages persistence of generated content and user data in PostgreSQL.
 7. **AI Engine**: Interfaces with AI models for content generation and enhancement.
 8. **Interactive Elements Generator**: Creates interactive learning components.
@@ -78,7 +79,7 @@ public class Metadata {
     private String tags;
     private ComplexityLevel complexity;
     private Integer estimatedDuration;
-    
+
     // Getters and setters
 }
 
@@ -107,26 +108,26 @@ public interface ProgressTrackable {
 public class LearningPreferences {
     @Enumerated(EnumType.STRING)
     private Duration duration;
-    
+
     @Enumerated(EnumType.STRING)
     private Focus focus;
-    
+
     @Enumerated(EnumType.STRING)
     private ComplexityLevel difficulty;
-    
+
     @Enumerated(EnumType.STRING)
     private KnowledgeLevel priorKnowledge;
-    
+
     // Getters and setters
-    
+
     public enum Duration {
         SHORT, LONG
     }
-    
+
     public enum Focus {
         DEPTH, BREADTH
     }
-    
+
     public enum ContentFormat {
         COURSE, BLOCK
     }
@@ -139,10 +140,11 @@ public class Progress {
     private Integer score;
     private int attempts = 0;
     private LocalDateTime lastAttempt = LocalDateTime.now();
-    
+
     // Getters and setters
 }
 ```
+
 ### Widget System
 
 ```java
@@ -157,204 +159,148 @@ public interface Widget extends ContentElement {
     String render();
 }
 
-// Base widget abstract class
+// Widget entity with JSON content
 @Entity
 @Table(name = "widgets")
-@Inheritance(strategy = InheritanceType.JOINED)
-public abstract class BaseWidget implements Widget, Entity {
+@Data
+public class Widget implements ContentElement, Entity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Column(nullable = false)
-    private String type;
-    
+    @Enumerated(EnumType.STRING)
+    private WidgetType type;
+
     @Column(nullable = false)
     private Integer order;
-    
+
     @Embedded
     private Metadata metadata;
-    
+
     @CreationTimestamp
     private LocalDateTime createdAt;
-    
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "block_id", nullable = false)
     private Block block;
-    
-    public BaseWidget() {}
-    
-    public BaseWidget(String type, Integer order) {
+
+    // JSON content column to store widget-specific data
+    @Column(columnDefinition = "jsonb")
+    private String content;
+
+    public Widget() {}
+
+    public Widget(WidgetType type, Integer order, String content) {
         this.type = type;
         this.order = order;
-    }
-    
-    @Override
-    public WidgetType getWidgetType() {
-        return WidgetType.valueOf(type.toUpperCase());
-    }
-    
-    // Abstract method to be implemented by subclasses
-    @Override
-    public abstract String render();
-    
-    // Getters and setters
-}
-
-// Concrete widget implementations
-@Entity
-@Table(name = "text_widgets")
-public class TextWidget extends BaseWidget {
-    @Column(length = 10000)
-    private String content;
-    
-    @Column(length = 1000)
-    private String formatting;
-    
-    public TextWidget() {
-        super();
-    }
-    
-    public TextWidget(Integer order, String content) {
-        super("TEXT", order);
         this.content = content;
     }
-    
-    @Override
-    public String render() {
-        // Simple implementation
-        return content;
-    }
-    
-    // Getters and setters
-}
 
-@Entity
-@Table(name = "image_widgets")
-public class ImageWidget extends BaseWidget {
-    @Column(nullable = false)
-    private String url;
-    
-    @Column(nullable = false)
-    private String altText;
-    
-    private String caption;
-    
-    public ImageWidget() {
-        super();
-    }
-    
-    public ImageWidget(Integer order, String url, String altText) {
-        super("IMAGE", order);
-        this.url = url;
-        this.altText = altText;
-    }
-    
     @Override
-    public String render() {
-        // Simple implementation
-        return "<img src='" + url + "' alt='" + altText + "' />";
+    public String getType() {
+        return type.name();
     }
-    
-    // Getters and setters
-}
 
-@Entity
-@Table(name = "video_widgets")
-public class VideoWidget extends BaseWidget {
-    @Column(nullable = false)
-    private String url;
-    
-    @Column(nullable = false)
-    private String embedType;
-    
-    @Column(nullable = false)
-    private String embedId;
-    
-    public VideoWidget() {
-        super();
-    }
-    
-    public VideoWidget(Integer order, String url, String embedType, String embedId) {
-        super("VIDEO", order);
-        this.url = url;
-        this.embedType = embedType;
-        this.embedId = embedId;
-    }
-    
-    @Override
     public String render() {
-        // Simple implementation based on embed type
-        switch (embedType.toLowerCase()) {
-            case "youtube":
-                return "<iframe src='https://www.youtube.com/embed/" + embedId + "' frameborder='0' allowfullscreen></iframe>";
-            case "vimeo":
-                return "<iframe src='https://player.vimeo.com/video/" + embedId + "' frameborder='0' allowfullscreen></iframe>";
-            default:
-                return "<video src='" + url + "' controls></video>";
+        // Render based on widget type and content
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            switch (type) {
+                case TEXT:
+                    TextContent textContent = mapper.readValue(content, TextContent.class);
+                    return textContent.getContent();
+
+                case IMAGE:
+                    ImageContent imageContent = mapper.readValue(content, ImageContent.class);
+                    return "<img src='" + imageContent.getUrl() + "' alt='" + imageContent.getAltText() + "' />";
+
+                case VIDEO:
+                    VideoContent videoContent = mapper.readValue(content, VideoContent.class);
+                    if ("youtube".equalsIgnoreCase(videoContent.getEmbedType())) {
+                        return "<iframe src='https://www.youtube.com/embed/" + videoContent.getEmbedId() +
+                               "' frameborder='0' allowfullscreen></iframe>";
+                    } else if ("vimeo".equalsIgnoreCase(videoContent.getEmbedType())) {
+                        return "<iframe src='https://player.vimeo.com/video/" + videoContent.getEmbedId() +
+                               "' frameborder='0' allowfullscreen></iframe>";
+                    } else {
+                        return "<video src='" + videoContent.getUrl() + "' controls></video>";
+                    }
+
+                default:
+                    return "Unsupported widget type: " + type;
+            }
+        } catch (JsonProcessingException e) {
+            return "Error rendering widget: " + e.getMessage();
         }
     }
-    
-    // Getters and setters
 }
 
-// Widget factory for creating appropriate widget types
+// Content classes for different widget types
+@Data
+public static class TextContent {
+    private String content;
+    private String formatting;
+}
+
+@Data
+public static class ImageContent {
+    private String url;
+    private String altText;
+    private String caption;
+}
+
+@Data
+public static class VideoContent {
+    private String url;
+    private String embedType;
+    private String embedId;
+}
+
+// Widget factory for creating widgets with appropriate content
 @Component
 public class WidgetFactory {
-    public Widget createWidget(String type, Object data, Integer order, Metadata metadata) {
-        Widget widget;
-        
-        switch (type.toUpperCase()) {
-            case "TEXT":
-                TextWidgetData textData = (TextWidgetData) data;
-                widget = new TextWidget(order, textData.getContent());
-                ((TextWidget) widget).setFormatting(textData.getFormatting());
-                break;
-                
-            case "IMAGE":
-                ImageWidgetData imageData = (ImageWidgetData) data;
-                widget = new ImageWidget(order, imageData.getUrl(), imageData.getAltText());
-                ((ImageWidget) widget).setCaption(imageData.getCaption());
-                break;
-                
-            case "VIDEO":
-                VideoWidgetData videoData = (VideoWidgetData) data;
-                widget = new VideoWidget(order, videoData.getUrl(), videoData.getEmbedType(), videoData.getEmbedId());
-                break;
-                
-            default:
-                throw new IllegalArgumentException("Unsupported widget type: " + type);
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public Widget createWidget(WidgetType type, Object contentData, Integer order, Metadata metadata) {
+        try {
+            String jsonContent = objectMapper.writeValueAsString(contentData);
+            Widget widget = new Widget(type, order, jsonContent);
+            widget.setMetadata(metadata);
+            return widget;
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize widget content", e);
         }
-        
-        ((BaseWidget) widget).setMetadata(metadata);
-        return widget;
     }
-    
-    // Data classes for widget creation
-    @Data
-    public static class TextWidgetData {
-        private String content;
-        private String formatting;
+
+    public Widget createTextWidget(String content, String formatting, Integer order, Metadata metadata) {
+        TextContent textContent = new TextContent();
+        textContent.setContent(content);
+        textContent.setFormatting(formatting);
+        return createWidget(WidgetType.TEXT, textContent, order, metadata);
     }
-    
-    @Data
-    public static class ImageWidgetData {
-        private String url;
-        private String altText;
-        private String caption;
+
+    public Widget createImageWidget(String url, String altText, String caption, Integer order, Metadata metadata) {
+        ImageContent imageContent = new ImageContent();
+        imageContent.setUrl(url);
+        imageContent.setAltText(altText);
+        imageContent.setCaption(caption);
+        return createWidget(WidgetType.IMAGE, imageContent, order, metadata);
     }
-    
-    @Data
-    public static class VideoWidgetData {
-        private String url;
-        private String embedType;
-        private String embedId;
+
+    public Widget createVideoWidget(String url, String embedType, String embedId, Integer order, Metadata metadata) {
+        VideoContent videoContent = new VideoContent();
+        videoContent.setUrl(url);
+        videoContent.setEmbedType(embedType);
+        videoContent.setEmbedId(embedId);
+        return createWidget(WidgetType.VIDEO, videoContent, order, metadata);
     }
 }
 ```
+
 ### Interactive Elements System
 
 ```java
@@ -369,12 +315,8 @@ public class EvaluationResult {
     private boolean correct;
     private int score;
     private String feedback;
-    
-    @ElementCollection
-    @CollectionTable(name = "evaluation_hints")
-    @Column(name = "hint")
     private List<String> hints = new ArrayList<>();
-    
+
     // Getters and setters
 }
 
@@ -382,106 +324,101 @@ public class EvaluationResult {
 public interface InteractiveElement extends ContentElement, ProgressTrackable {
     InteractiveElementType getElementType();
     String getTitle();
-    String getInstructions();
     EvaluationResult evaluate(String response);
     String render();
 }
 
-// Base interactive element abstract class
+// Interactive element entity with JSON content
 @Entity
 @Table(name = "interactive_elements")
-@Inheritance(strategy = InheritanceType.JOINED)
-public abstract class BaseInteractiveElement implements InteractiveElement, Entity {
+@Data
+public class InteractiveElement implements ContentElement, ProgressTrackable, Entity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Column(nullable = false)
-    private String type;
-    
+    @Enumerated(EnumType.STRING)
+    private InteractiveElementType type;
+
     @Column(nullable = false)
     private Integer order;
-    
+
     @Column(nullable = false)
     private String title;
-    
-    @Column(length = 1000)
-    private String instructions;
-    
+
     @Embedded
     private Metadata metadata;
-    
+
     @CreationTimestamp
     private LocalDateTime createdAt;
-    
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "block_id", nullable = false)
     private Block block;
-    
+
+    // JSON content column to store element-specific data including instructions
+    @Column(columnDefinition = "jsonb")
+    private String content;
+
     @ElementCollection
-    @CollectionTable(name = "user_progress", 
+    @CollectionTable(name = "user_progress",
         joinColumns = @JoinColumn(name = "element_id"))
     @MapKeyJoinColumn(name = "user_id")
     private Map<User, Progress> userProgress = new HashMap<>();
-    
-    public BaseInteractiveElement() {}
-    
-    public BaseInteractiveElement(String type, Integer order, String title) {
+
+    public InteractiveElement() {}
+
+    public InteractiveElement(InteractiveElementType type, Integer order, String title, String content) {
         this.type = type;
         this.order = order;
         this.title = title;
+        this.content = content;
     }
-    
-    @Override
-    public InteractiveElementType getElementType() {
-        return InteractiveElementType.valueOf(type.toUpperCase());
-    }
-    
-    @Override
-    public abstract EvaluationResult evaluate(String response);
-    
-    @Override
-    public abstract String render();
-    
-    @Override
-    public Progress getUserProgress(Long userId) {
-        // In a real implementation, we would look up the User entity
-        User user = new User();
-        user.setId(userId);
-        return userProgress.getOrDefault(user, new Progress());
-    }
-    
-    @Override
-    public void updateUserProgress(Long userId, Progress progress) {
-        // In a real implementation, we would look up the User entity
-        User user = new User();
-        user.setId(userId);
-        userProgress.put(user, progress);
-    }
-    
-    // Getters and setters
-}
 
-// Concrete interactive element implementation (Quiz example)
-@Entity
-@Table(name = "quiz_elements")
-public class QuizElement extends BaseInteractiveElement {
-    @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Question> questions = new ArrayList<>();
-    
-    public QuizElement() {
-        super();
-    }
-    
-    public QuizElement(Integer order, String title) {
-        super("QUIZ", order, title);
-    }
-    
     @Override
+    public String getType() {
+        return type.name();
+    }
+
     public EvaluationResult evaluate(String response) {
+        // Evaluate based on element type and content
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            switch (type) {
+                case QUIZ:
+                    QuizContent quizContent = mapper.readValue(content, QuizContent.class);
+                    return evaluateQuiz(quizContent, response);
+
+                case POLL:
+                    // Poll doesn't have right/wrong answers
+                    EvaluationResult pollResult = new EvaluationResult();
+                    pollResult.setCorrect(true);
+                    pollResult.setFeedback("Thank you for your response!");
+                    return pollResult;
+
+                case REORDER:
+                    ReorderContent reorderContent = mapper.readValue(content, ReorderContent.class);
+                    return evaluateReorder(reorderContent, response);
+
+                default:
+                    EvaluationResult defaultResult = new EvaluationResult();
+                    defaultResult.setCorrect(false);
+                    defaultResult.setFeedback("Evaluation not implemented for this element type.");
+                    return defaultResult;
+            }
+        } catch (JsonProcessingException e) {
+            EvaluationResult errorResult = new EvaluationResult();
+            errorResult.setCorrect(false);
+            errorResult.setFeedback("Error evaluating response: " + e.getMessage());
+            return errorResult;
+        }
+    }
+
+    private EvaluationResult evaluateQuiz(QuizContent quizContent, String response) {
         // Simple implementation
         EvaluationResult result = new EvaluationResult();
         result.setCorrect(true);
@@ -489,83 +426,236 @@ public class QuizElement extends BaseInteractiveElement {
         result.setFeedback("Great job!");
         return result;
     }
-    
-    @Override
-    public String render() {
+
+    private EvaluationResult evaluateReorder(ReorderContent reorderContent, String response) {
         // Simple implementation
-        StringBuilder sb = new StringBuilder();
-        sb.append("<div class='quiz'><h3>").append(getTitle()).append("</h3>");
-        
-        if (getInstructions() != null) {
-            sb.append("<p>").append(getInstructions()).append("</p>");
+        EvaluationResult result = new EvaluationResult();
+        result.setCorrect(true);
+        result.setScore(100);
+        result.setFeedback("Perfect order!");
+        return result;
+    }
+
+    public String render() {
+        // Render based on element type and content
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            switch (type) {
+                case QUIZ:
+                    QuizContent quizContent = mapper.readValue(content, QuizContent.class);
+                    return renderQuiz(quizContent);
+
+                case POLL:
+                    PollContent pollContent = mapper.readValue(content, PollContent.class);
+                    return renderPoll(pollContent);
+
+                case REORDER:
+                    ReorderContent reorderContent = mapper.readValue(content, ReorderContent.class);
+                    return renderReorder(reorderContent);
+
+                default:
+                    return "Unsupported interactive element type: " + type;
+            }
+        } catch (JsonProcessingException e) {
+            return "Error rendering interactive element: " + e.getMessage();
         }
-        
+    }
+
+    private String renderQuiz(QuizContent quizContent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div class='quiz'><h3>").append(title).append("</h3>");
+
+        if (quizContent.getInstructions() != null) {
+            sb.append("<p>").append(quizContent.getInstructions()).append("</p>");
+        }
+
         sb.append("<form>");
-        for (Question question : questions) {
+        for (QuizContent.Question question : quizContent.getQuestions()) {
             sb.append("<div class='question'>");
             sb.append("<p>").append(question.getText()).append("</p>");
-            
-            // Render based on question type
-            // Implementation details omitted for brevity
-            
+
+            // Render options based on question type
+            if (question.getOptions() != null) {
+                for (QuizContent.Option option : question.getOptions()) {
+                    sb.append("<label><input type='radio' name='q").append(question.getId())
+                      .append("' value='").append(option.getId()).append("'> ")
+                      .append(option.getText()).append("</label><br>");
+                }
+            }
+
             sb.append("</div>");
         }
-        
+
         sb.append("<button type='submit'>Submit</button></form></div>");
         return sb.toString();
     }
-    
-    // Nested entity classes
-    @Entity
-    @Table(name = "quiz_questions")
+
+    private String renderPoll(PollContent pollContent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div class='poll'><h3>").append(title).append("</h3>");
+
+        if (pollContent.getInstructions() != null) {
+            sb.append("<p>").append(pollContent.getInstructions()).append("</p>");
+        }
+
+        sb.append("<form>");
+        sb.append("<p>").append(pollContent.getQuestion()).append("</p>");
+
+        String inputType = pollContent.isAllowMultipleSelections() ? "checkbox" : "radio";
+        for (PollContent.Option option : pollContent.getOptions()) {
+            sb.append("<label><input type='").append(inputType).append("' name='poll")
+              .append("' value='").append(option.getId()).append("'> ")
+              .append(option.getText()).append("</label><br>");
+        }
+
+        sb.append("<button type='submit'>Submit</button></form></div>");
+        return sb.toString();
+    }
+
+    private String renderReorder(ReorderContent reorderContent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div class='reorder'><h3>").append(title).append("</h3>");
+
+        if (reorderContent.getInstructions() != null) {
+            sb.append("<p>").append(reorderContent.getInstructions()).append("</p>");
+        }
+
+        sb.append("<ul class='sortable'>");
+        for (ReorderContent.Item item : reorderContent.getItems()) {
+            sb.append("<li data-id='").append(item.getId()).append("'>")
+              .append(item.getText()).append("</li>");
+        }
+        sb.append("</ul>");
+
+        sb.append("<button type='button'>Check Order</button></div>");
+        return sb.toString();
+    }
+
+    @Override
+    public Progress getUserProgress(Long userId) {
+        // In a real implementation, we would look up the User entity
+        User user = new User();
+        user.setId(userId);
+        return userProgress.getOrDefault(user, new Progress());
+    }
+
+    @Override
+    public void updateUserProgress(Long userId, Progress progress) {
+        // In a real implementation, we would look up the User entity
+        User user = new User();
+        user.setId(userId);
+        userProgress.put(user, progress);
+    }
+}
+
+// Content classes for different interactive element types
+@Data
+public static class QuizContent {
+    private String instructions;
+    private List<Question> questions = new ArrayList<>();
+
     @Data
     public static class Question {
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-        
-        @Column(nullable = false, length = 1000)
+        private String id;
         private String text;
-        
-        @Enumerated(EnumType.STRING)
-        @Column(nullable = false)
-        private QuestionType type;
-        
-        @Column(length = 1000)
+        private String type; // MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER
         private String correctAnswer;
-        
-        @Column(length = 1000)
         private String explanation;
-        
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "quiz_id", nullable = false)
-        private QuizElement quiz;
-        
-        @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
         private List<Option> options = new ArrayList<>();
     }
-    
-    @Entity
-    @Table(name = "quiz_options")
+
     @Data
     public static class Option {
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-        
-        @Column(nullable = false, length = 1000)
+        private String id;
         private String text;
-        
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "question_id", nullable = false)
-        private Question question;
     }
-    
-    public enum QuestionType {
-        MULTIPLE_CHOICE, TRUE_FALSE, SHORT_ANSWER
+}
+
+@Data
+public static class PollContent {
+    private String instructions;
+    private String question;
+    private boolean allowMultipleSelections;
+    private boolean showResults;
+    private List<Option> options = new ArrayList<>();
+
+    @Data
+    public static class Option {
+        private String id;
+        private String text;
+    }
+}
+
+@Data
+public static class ReorderContent {
+    private String instructions;
+    private List<Item> items = new ArrayList<>();
+
+    @Data
+    public static class Item {
+        private String id;
+        private String text;
+        private int correctPosition;
+    }
+}
+
+// Interactive element factory for creating elements with appropriate content
+@Component
+public class InteractiveElementFactory {
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public InteractiveElement createInteractiveElement(InteractiveElementType type, Object contentData,
+                                                      Integer order, String title,
+                                                      Metadata metadata) {
+        try {
+            String jsonContent = objectMapper.writeValueAsString(contentData);
+            InteractiveElement element = new InteractiveElement(type, order, title, jsonContent);
+            element.setMetadata(metadata);
+            return element;
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Failed to serialize interactive element content", e);
+        }
+    }
+
+    public InteractiveElement createQuizElement(List<QuizContent.Question> questions,
+                                               String instructions,
+                                               Integer order, String title,
+                                               Metadata metadata) {
+        QuizContent quizContent = new QuizContent();
+        quizContent.setQuestions(questions);
+        quizContent.setInstructions(instructions);
+        return createInteractiveElement(InteractiveElementType.QUIZ, quizContent,
+                                       order, title, metadata);
+    }
+
+    public InteractiveElement createPollElement(String question, List<PollContent.Option> options,
+                                              boolean allowMultipleSelections, boolean showResults,
+                                              String instructions,
+                                              Integer order, String title,
+                                              Metadata metadata) {
+        PollContent pollContent = new PollContent();
+        pollContent.setQuestion(question);
+        pollContent.setOptions(options);
+        pollContent.setAllowMultipleSelections(allowMultipleSelections);
+        pollContent.setShowResults(showResults);
+        pollContent.setInstructions(instructions);
+        return createInteractiveElement(InteractiveElementType.POLL, pollContent,
+                                       order, title, metadata);
+    }
+
+    public InteractiveElement createReorderElement(List<ReorderContent.Item> items,
+                                                 String instructions,
+                                                 Integer order, String title,
+                                                 Metadata metadata) {
+        ReorderContent reorderContent = new ReorderContent();
+        reorderContent.setItems(items);
+        reorderContent.setInstructions(instructions);
+        return createInteractiveElement(InteractiveElementType.REORDER, reorderContent,
+                                       order, title, metadata);
     }
 }
 ```
+
 ### Content Organization Models
 
 ```java
@@ -577,38 +667,38 @@ public class Block implements ContentContainer, Entity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Column(nullable = false)
     private String title;
-    
+
     @Column(length = 1000)
     private String description;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "content_id")
     private GeneratedContent generatedContent;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "module_id")
     private Module module;
-    
+
     @Embedded
     private Metadata metadata;
-    
+
     @CreationTimestamp
     private LocalDateTime createdAt;
-    
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-    
+
     @OneToMany(mappedBy = "block", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("order ASC")
-    private List<BaseWidget> widgets = new ArrayList<>();
-    
+    private List<Widget> widgets = new ArrayList<>();
+
     @OneToMany(mappedBy = "block", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("order ASC")
-    private List<BaseInteractiveElement> interactiveElements = new ArrayList<>();
-    
+    private List<InteractiveElement> interactiveElements = new ArrayList<>();
+
     // Methods to get all content elements in order
     public List<ContentElement> getContentElements() {
         List<ContentElement> elements = new ArrayList<>();
@@ -627,29 +717,29 @@ public class Module implements ContentContainer, Entity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Column(nullable = false)
     private String title;
-    
+
     @Column(length = 1000)
     private String description;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "content_id", nullable = false)
     private GeneratedContent generatedContent;
-    
+
     @Column(length = 1000)
     private String learningObjectives;
-    
+
     @Embedded
     private Metadata metadata;
-    
+
     @CreationTimestamp
     private LocalDateTime createdAt;
-    
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-    
+
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<Block> blocks = new ArrayList<>();
@@ -665,10 +755,10 @@ public class Module implements ContentContainer, Entity {
 public class InputSource {
     @Enumerated(EnumType.STRING)
     private InputType type;
-    
+
     @Column(length = 1000)
     private String value;
-    
+
     public enum InputType {
         TOPIC, FILE
     }
@@ -682,44 +772,44 @@ public class GeneratedContent implements Entity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Column(nullable = false)
     private String title;
-    
+
     @Column(length = 1000)
     private String description;
-    
+
     @Enumerated(EnumType.STRING)
     private LearningPreferences.ContentFormat format;
-    
+
     @Embedded
     private InputSource inputSource;
-    
+
     @Embedded
     private LearningPreferences preferences;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-    
+
     @CreationTimestamp
     private LocalDateTime createdAt;
-    
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-    
+
     @OneToMany(mappedBy = "generatedContent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Block> blocks = new ArrayList<>();
-    
+
     @OneToMany(mappedBy = "generatedContent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Module> modules = new ArrayList<>();
-    
+
     @OneToMany(mappedBy = "generatedContent", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ContentFeedback> feedbacks = new HashSet<>();
-    
+
     @Embedded
     private SharingInfo sharingInfo = new SharingInfo();
-    
+
     @Embeddable
     @Data
     public static class SharingInfo {
@@ -727,26 +817,26 @@ public class GeneratedContent implements Entity {
         private String shareLink;
         private LocalDateTime sharedAt;
     }
-    
+
     public boolean isCourse() {
         return format == LearningPreferences.ContentFormat.COURSE;
     }
-    
+
     public String share() {
         sharingInfo.setShared(true);
         sharingInfo.setSharedAt(LocalDateTime.now());
         sharingInfo.setShareLink("share/" + id);
         return sharingInfo.getShareLink();
     }
-    
+
     public void unshare() {
         sharingInfo.setShared(false);
     }
-    
+
     public boolean isShared() {
         return sharingInfo.isShared();
     }
-    
+
     public void addFeedback(ContentFeedback feedback) {
         feedbacks.add(feedback);
         feedback.setGeneratedContent(this);
@@ -761,30 +851,31 @@ public class ContentFeedback implements Entity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "content_id", nullable = false)
     private GeneratedContent generatedContent;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-    
+
     private Integer rating;
-    
+
     @Column(length = 1000)
     private String comments;
-    
+
     @Column(length = 1000)
     private String reportedIssue;
-    
+
     @CreationTimestamp
     private LocalDateTime createdAt;
-    
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }
 ```
+
 ### Repository Interfaces
 
 ```java
@@ -796,14 +887,14 @@ public interface ContentElementRepository extends JpaRepository<ContentElement, 
 
 // Widget repository
 @Repository
-public interface WidgetRepository extends JpaRepository<BaseWidget, Long> {
-    List<BaseWidget> findByBlockOrderByOrderAsc(Block block);
+public interface WidgetRepository extends JpaRepository<Widget, Long> {
+    List<Widget> findByBlockOrderByOrderAsc(Block block);
 }
 
 // Interactive element repository
 @Repository
-public interface InteractiveElementRepository extends JpaRepository<BaseInteractiveElement, Long> {
-    List<BaseInteractiveElement> findByBlockOrderByOrderAsc(Block block);
+public interface InteractiveElementRepository extends JpaRepository<InteractiveElement, Long> {
+    List<InteractiveElement> findByBlockOrderByOrderAsc(Block block);
 }
 
 // Block repository
@@ -854,52 +945,52 @@ public class ContentGenerationServiceImpl implements ContentGenerationService {
     private final ModuleRepository moduleRepository;
     private final WidgetFactory widgetFactory;
     private final InteractiveElementFactory elementFactory;
-    
+
     @Override
     public GeneratedContent generateFromTopic(String topic, LearningPreferences preferences, User user) {
         // Create a new generated content
         GeneratedContent content = new GeneratedContent();
         content.setTitle("Learning " + topic);
         content.setDescription("A generated course about " + topic);
-        content.setFormat(preferences.getDuration() == LearningPreferences.Duration.LONG ? 
-                         LearningPreferences.ContentFormat.COURSE : 
+        content.setFormat(preferences.getDuration() == LearningPreferences.Duration.LONG ?
+                         LearningPreferences.ContentFormat.COURSE :
                          LearningPreferences.ContentFormat.BLOCK);
-        
+
         // Set input source
         InputSource inputSource = new InputSource();
         inputSource.setType(InputSource.InputType.TOPIC);
         inputSource.setValue(topic);
         content.setInputSource(inputSource);
-        
+
         // Set preferences and user
         content.setPreferences(preferences);
         content.setUser(user);
-        
+
         // Save the content
         contentRepository.save(content);
-        
+
         // Generate content based on preferences
         if (content.isCourse()) {
             generateCourseContent(content, topic);
         } else {
             generateBlockContent(content, topic);
         }
-        
+
         return content;
     }
-    
+
     @Override
     public GeneratedContent generateFromFile(MultipartFile file, LearningPreferences preferences, User user) {
         // Implementation details omitted for brevity
         // Similar to generateFromTopic but processes file content
         return null;
     }
-    
+
     private void generateCourseContent(GeneratedContent content, String topic) {
         // Implementation details omitted for brevity
         // Would use AI service to generate course structure and content
     }
-    
+
     private void generateBlockContent(GeneratedContent content, String topic) {
         // Implementation details omitted for brevity
         // Would use AI service to generate block content
@@ -915,227 +1006,166 @@ This modular, extensible design follows SOLID principles:
 4. **Interface Segregation**: Interfaces are focused and specific (e.g., ProgressTrackable for elements that track progress)
 5. **Dependency Inversion**: High-level modules depend on abstractions (e.g., repositories, factories)
 
-## Entity Relationship Diagram (ERD)
+## Database Class Diagram
 
 ```mermaid
-erDiagram
-    USER {
-        long id PK
-        string email
-        string passwordHash
-        string name
-        datetime createdAt
-        datetime updatedAt
-        datetime lastLogin
+classDiagram
+    class User {
+        +Long id
+        +String email
+        +String name
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +LocalDateTime lastLogin
+        +List~UserPreferences~ preferences
+        +List~GeneratedContent~ contents
     }
-    
-    USER_PREFERENCES {
-        long user_id PK,FK
-        enum defaultDuration
-        enum defaultFocus
-        enum defaultDifficulty
-        string accessibilitySettings
+
+    class UserPreferences {
+        +User user
+        +Duration defaultDuration
+        +Focus defaultFocus
+        +ComplexityLevel defaultDifficulty
+        +String accessibilitySettings
     }
-    
-    GENERATED_CONTENT {
-        long id PK
-        string title
-        string description
-        enum format
-        datetime createdAt
-        datetime updatedAt
-        long user_id FK
+
+    class GeneratedContent {
+        +Long id
+        +String title
+        +String description
+        +ContentFormat format
+        +InputSource inputSource
+        +LearningPreferences preferences
+        +User user
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +List~Block~ blocks
+        +List~Module~ modules
+        +Set~ContentFeedback~ feedbacks
+        +SharingInfo sharingInfo
+        +boolean isCourse()
+        +String share()
+        +void unshare()
+        +boolean isShared()
     }
-    
-    INPUT_SOURCE {
-        long content_id PK,FK
-        enum type
-        string value
+
+    class InputSource {
+        +InputType type
+        +String value
     }
-    
-    LEARNING_PREFERENCES {
-        long content_id PK,FK
-        enum format
-        enum duration
-        enum focus
-        enum difficulty
-        enum priorKnowledge
+
+    class LearningPreferences {
+        +Duration duration
+        +Focus focus
+        +ComplexityLevel difficulty
+        +KnowledgeLevel priorKnowledge
     }
-    
-    SHARING_INFO {
-        long content_id PK,FK
-        boolean isShared
-        string shareLink
-        datetime sharedAt
+
+    class SharingInfo {
+        +boolean isShared
+        +String shareLink
+        +LocalDateTime sharedAt
     }
-    
-    MODULE {
-        long id PK
-        string title
-        string description
-        string learningObjectives
-        datetime createdAt
-        datetime updatedAt
-        long content_id FK
+
+    class Module {
+        +Long id
+        +String title
+        +String description
+        +String learningObjectives
+        +GeneratedContent generatedContent
+        +Metadata metadata
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +List~Block~ blocks
     }
-    
-    BLOCK {
-        long id PK
-        string title
-        string description
-        datetime createdAt
-        datetime updatedAt
-        long content_id FK
-        long module_id FK
+
+    class Block {
+        +Long id
+        +String title
+        +String description
+        +GeneratedContent generatedContent
+        +Module module
+        +Metadata metadata
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +List~Widget~ widgets
+        +List~InteractiveElement~ interactiveElements
+        +List~ContentElement~ getContentElements()
     }
-    
-    CONTENT_ELEMENT {
-        long id PK
-        string type
-        int order
-        datetime createdAt
-        datetime updatedAt
-        long block_id FK
+
+    class Widget {
+        +Long id
+        +WidgetType type
+        +Integer order
+        +Block block
+        +Metadata metadata
+        +String content
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +String render()
     }
-    
-    WIDGET {
-        long id PK,FK
+
+    class InteractiveElement {
+        +Long id
+        +InteractiveElementType type
+        +Integer order
+        +String title
+        +Block block
+        +Metadata metadata
+        +String content
+        +Map~User, Progress~ userProgress
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +EvaluationResult evaluate(String)
+        +String render()
+        +Progress getUserProgress(Long)
+        +void updateUserProgress(Long, Progress)
     }
-    
-    TEXT_WIDGET {
-        long id PK,FK
-        string content
-        string formatting
+
+    class ContentFeedback {
+        +Long id
+        +GeneratedContent generatedContent
+        +User user
+        +Integer rating
+        +String comments
+        +String reportedIssue
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
     }
-    
-    IMAGE_WIDGET {
-        long id PK,FK
-        string url
-        string altText
-        string caption
+
+    class Metadata {
+        +String tags
+        +ComplexityLevel complexity
+        +Integer estimatedDuration
     }
-    
-    VIDEO_WIDGET {
-        long id PK,FK
-        string url
-        string embedType
-        string embedId
+
+    class Progress {
+        +boolean completed
+        +Integer score
+        +int attempts
+        +LocalDateTime lastAttempt
     }
-    
-    INTERACTIVE_ELEMENT {
-        long id PK,FK
-        string title
-        string instructions
-    }
-    
-    QUIZ_ELEMENT {
-        long id PK,FK
-    }
-    
-    QUESTION {
-        long id PK
-        string text
-        enum type
-        string correctAnswer
-        string explanation
-        long quiz_id FK
-    }
-    
-    OPTION {
-        long id PK
-        string text
-        long question_id FK
-    }
-    
-    POLL_ELEMENT {
-        long id PK,FK
-        string question
-        boolean allowMultipleSelections
-        boolean showResults
-    }
-    
-    POLL_OPTION {
-        long id PK
-        string text
-        long poll_id FK
-    }
-    
-    REORDERING_ELEMENT {
-        long id PK,FK
-    }
-    
-    REORDER_ITEM {
-        long id PK
-        string text
-        int correctPosition
-        long reordering_id FK
-    }
-    
-    USER_PROGRESS {
-        long element_id PK,FK
-        long user_id PK,FK
-        boolean completed
-        int score
-        int attempts
-        datetime lastAttempt
-    }
-    
-    CONTENT_FEEDBACK {
-        long id PK
-        int rating
-        string comments
-        string reportedIssue
-        datetime createdAt
-        long content_id FK
-        long user_id FK
-    }
-    
-    METADATA {
-        long entity_id PK,FK
-        string tags
-        enum complexity
-        int estimatedDuration
-    }
-    
-    USER ||--o{ USER_PREFERENCES : has
-    USER ||--o{ GENERATED_CONTENT : creates
-    USER ||--o{ CONTENT_FEEDBACK : provides
-    USER ||--o{ USER_PROGRESS : tracks
-    
-    GENERATED_CONTENT ||--|| INPUT_SOURCE : has
-    GENERATED_CONTENT ||--|| LEARNING_PREFERENCES : has
-    GENERATED_CONTENT ||--|| SHARING_INFO : has
-    GENERATED_CONTENT ||--o{ MODULE : contains
-    GENERATED_CONTENT ||--o{ BLOCK : contains
-    GENERATED_CONTENT ||--o{ CONTENT_FEEDBACK : receives
-    
-    MODULE ||--o{ BLOCK : contains
-    MODULE ||--|| METADATA : has
-    
-    BLOCK ||--o{ CONTENT_ELEMENT : contains
-    BLOCK ||--|| METADATA : has
-    
-    CONTENT_ELEMENT ||--|| METADATA : has
-    
-    CONTENT_ELEMENT ||--o{ WIDGET : is
-    CONTENT_ELEMENT ||--o{ INTERACTIVE_ELEMENT : is
-    
-    WIDGET ||--o{ TEXT_WIDGET : is
-    WIDGET ||--o{ IMAGE_WIDGET : is
-    WIDGET ||--o{ VIDEO_WIDGET : is
-    
-    INTERACTIVE_ELEMENT ||--o{ QUIZ_ELEMENT : is
-    INTERACTIVE_ELEMENT ||--o{ POLL_ELEMENT : is
-    INTERACTIVE_ELEMENT ||--o{ REORDERING_ELEMENT : is
-    INTERACTIVE_ELEMENT ||--o{ USER_PROGRESS : tracks
-    
-    QUIZ_ELEMENT ||--o{ QUESTION : contains
-    QUESTION ||--o{ OPTION : has
-    
-    POLL_ELEMENT ||--o{ POLL_OPTION : has
-    
-    REORDERING_ELEMENT ||--o{ REORDER_ITEM : contains
-```
+
+    User "1" -- "0..*" UserPreferences : has
+    User "1" -- "0..*" GeneratedContent : creates
+    User "1" -- "0..*" ContentFeedback : provides
+
+    GeneratedContent "1" -- "1" InputSource : has
+    GeneratedContent "1" -- "1" LearningPreferences : has
+    GeneratedContent "1" -- "1" SharingInfo : has
+    GeneratedContent "1" -- "0..*" Module : contains
+    GeneratedContent "1" -- "0..*" Block : contains
+    GeneratedContent "1" -- "0..*" ContentFeedback : receives
+
+    Module "1" -- "0..*" Block : contains
+    Module "1" -- "1" Metadata : has
+
+    Block "1" -- "0..*" Widget : contains
+    Block "1" -- "0..*" InteractiveElement : contains
+    Block "1" -- "1" Metadata : has
+
+    InteractiveElement "1" -- "0..*" Progress : tracks
+````
 
 ## Error Handling
 
@@ -1155,7 +1185,7 @@ The application implements a comprehensive error handling strategy:
 @Data
 public class ErrorResponse {
     private ErrorDetails error;
-    
+
     @Data
     public static class ErrorDetails {
         private String code;
@@ -1183,21 +1213,25 @@ The application employs a comprehensive testing strategy:
 ### Testing Levels:
 
 1. **Unit Testing**: Test individual components in isolation
+
    - Service methods
    - Utility functions
    - Model validations
 
 2. **Integration Testing**: Test interactions between components
+
    - API endpoints
    - Service interactions
    - Database operations
 
 3. **End-to-End Testing**: Test complete user flows
+
    - Content generation workflow
    - User authentication flow
    - Content sharing flow
 
 4. **Performance Testing**: Test system performance under load
+
    - Content generation response time
    - Concurrent user handling
    - Resource utilization
@@ -1244,23 +1278,23 @@ graph TD
     LB[Load Balancer] --> WebApp1[Web App Instance 1]
     LB --> WebApp2[Web App Instance 2]
     LB --> WebAppN[Web App Instance N]
-    
+
     WebApp1 --> ApiGW[API Gateway]
     WebApp2 --> ApiGW
     WebAppN --> ApiGW
-    
+
     ApiGW --> AuthSvc[Auth Service]
     ApiGW --> ContentSvc[Content Service]
     ApiGW --> UserSvc[User Service]
-    
+
     ContentSvc --> AIService[AI Service]
     ContentSvc --> StorageSvc[Storage Service]
-    
+
     AuthSvc --> UserDB[(User Database)]
     UserSvc --> UserDB
     StorageSvc --> ContentDB[(Content Database)]
     StorageSvc --> FileStorage[(File Storage)]
-    
+
     CDN[Content Delivery Network] --> StaticAssets[(Static Assets)]
     WebApp1 --> CDN
     WebApp2 --> CDN
@@ -1268,6 +1302,7 @@ graph TD
 ```
 
 Key deployment components:
+
 - Containerized microservices with Docker and Kubernetes
 - Auto-scaling based on demand
 - PostgreSQL database with connection pooling
