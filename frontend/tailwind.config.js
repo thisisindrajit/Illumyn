@@ -11,7 +11,6 @@ module.exports = {
         primary: {
           DEFAULT: 'var(--primary)',
           light: 'var(--primary-light)',
-          dark: 'var(--primary-dark)',
         },
         accent: {
           DEFAULT: 'var(--accent)',
@@ -25,7 +24,6 @@ module.exports = {
       borderColor: {
         primary: 'var(--primary)',
         'primary-light': 'var(--primary-light)',
-        'primary-dark': 'var(--primary-dark)',
         accent: 'var(--accent)',
         'accent-light': 'var(--accent-light)',
         secondary: 'var(--secondary)',
@@ -34,7 +32,6 @@ module.exports = {
       backgroundColor: {
         primary: 'var(--primary)',
         'primary-light': 'var(--primary-light)',
-        'primary-dark': 'var(--primary-dark)',
         accent: 'var(--accent)',
         'accent-light': 'var(--accent-light)',
         secondary: 'var(--secondary)',
@@ -44,7 +41,6 @@ module.exports = {
       textColor: {
         primary: 'var(--primary)',
         'primary-light': 'var(--primary-light)',
-        'primary-dark': 'var(--primary-dark)',
         accent: 'var(--accent)',
         'accent-light': 'var(--accent-light)',
         secondary: 'var(--secondary)',

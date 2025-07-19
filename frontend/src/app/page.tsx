@@ -12,9 +12,8 @@ const HomePage = () => {
       </div>
       {/* Details */}
       <div className="max-w-2xl flex flex-col items-center justify-center text-center gap-6 animate-slide-up">
-        <p className="text-xl text-foreground/80">
-          Transform any topic into an engaging, interactive learning
-          experience tailored just for you.
+        <p className="text-xl/relaxed text-foreground/80">
+          Transform any topic into an engaging, interactive learning experience tailored just for you.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <div className="animate-bounce-in py-2 px-4 sm:py-3 sm:px-6 rounded-lg shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border border-primary/25 bg-background">
@@ -39,7 +38,7 @@ const HomePage = () => {
           </div>
         </div>
         <Link href="/login">
-          <Button size="xl" className="bg-gradient-to-r from-primary to-secondary rounded-full hover:shadow-xl transition-all hover:scale-105 shadow-sm animate-pulse-slow">
+          <Button size="xl" className="rounded-full hover:shadow-xl transition-all hover:scale-105 shadow-sm animate-pulse-slow">
             Start Learning!
           </Button>
         </Link>
