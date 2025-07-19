@@ -15,7 +15,7 @@ const LoginPage = () => {
                     <h1 className="text-xl sm:text-2xl font-semibold text-center">Welcome to ILLUMYN!</h1>
                     <Separator className="bg-primary" />
                     <div className="text-center text-foreground/80 leading-relaxed">
-                        <p>Sign in with Google to access your personalized learning experience. It's easy, fast, and secure.</p>
+                        <p>{`Sign in with Google to access your personalized learning experience. It's easy, fast, and secure.`}</p>
                     </div>
                     <Button
                         className="w-full flex items-center justify-center gap-3 py-6 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 shadow-sm"
