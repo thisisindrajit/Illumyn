@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 const LoginPage = () => {
     return (
-        <div className="my-24 max-w-md w-full bg-background p-6 sm:p-8 rounded-lg shadow-lg border animate-fade-in flex flex-col items-center gap-6">
+        <div className="my-8 max-w-md w-full bg-background p-6 sm:p-8 rounded-lg shadow-lg border animate-fade-in flex flex-col items-center gap-6">
             <h1 className="text-xl sm:text-2xl font-semibold text-center">Welcome to ILLUMYN!</h1>
             <Separator className="bg-primary" />
             <div className="text-center text-foreground/80 leading-relaxed">
@@ -27,7 +27,7 @@ const LoginPage = () => {
                 </svg>
                 Sign in with Google
             </Button>
-            <p className="text-xs text-foreground/60 text-center">
+            <p className="text-xs/relaxed text-foreground/60 text-center">
                 By signing in, you agree to our Terms of Service and Privacy Policy.
             </p>
         </div>

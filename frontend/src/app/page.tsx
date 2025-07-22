@@ -3,15 +3,13 @@ import Link from "next/link";
 
 const HomePage = () => {
   return (
-    <div className="my-24 flex flex-col gap-6">
+    <div className="my-8 flex flex-col gap-6 max-w-[90%]">
       {/* Motto */}
-      <div className="relative">
-        <h1 className="text-5xl lg:text-6xl font-bold text-center animate-fade-in">
-          Learning, <span className="text-primary italic">redefined</span>.
-        </h1>
-      </div>
+      <h1 className="text-5xl/tight lg:text-6xl/tight font-bold text-center animate-fade-in">
+        Learning, <span className="text-primary italic">redefined</span>.
+      </h1>
       {/* Details */}
-      <div className="max-w-2xl flex flex-col items-center justify-center text-center gap-6 animate-slide-up">
+      <div className="flex flex-col items-center justify-center text-center gap-6 animate-slide-up">
         <p className="text-xl/relaxed text-foreground/80">
           Transform any topic into an engaging, interactive learning experience tailored just for you.
         </p>
