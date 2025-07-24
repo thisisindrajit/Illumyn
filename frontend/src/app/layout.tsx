@@ -26,7 +26,7 @@ export default function RootLayout({
         <link rel="manifest" href="/favicons/site.webmanifest" />
       </head>
       <body className={`antialiased`}>
-        <div className="p-4 lg:p-6 min-h-screen flex flex-col gap-6">
+        <div className="p-4 lg:p-6 min-h-screen max-w-[1440px] m-auto flex flex-col gap-6">
           <TopBar />
           <div className="flex-1 flex flex-col items-center justify-center gap-6">{children}</div>
         </div>

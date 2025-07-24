@@ -3,7 +3,7 @@ import Link from "next/link";
 
 const HomePage = () => {
   return (
-    <div className="my-8 flex flex-col gap-6 max-w-[90%]">
+    <div className="my-8 flex flex-col w-full gap-6">
       {/* Motto */}
       <h1 className="text-5xl/tight lg:text-6xl/tight font-bold text-center animate-fade-in">
         Learning, <span className="text-primary italic">redefined</span>.
