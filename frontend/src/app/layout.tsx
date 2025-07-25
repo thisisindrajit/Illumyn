@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Footer from "./components/Footer";
-import TopBar from "./components/TopBar";
+import Footer from "../components/Footer";
+import TopBar from "../components/TopBar";
 import "./globals.css";
 import { APP_DESCRIPTION, APP_NAME } from "../../constants/common";
 

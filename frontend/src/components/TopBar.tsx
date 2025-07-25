@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
-import { APP_NAME } from "../../../constants/common";
+import { APP_NAME } from "../../constants/common";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,15 +19,13 @@ const TopBar = () => {
             </Button>
           </Link>
         )
-      case "/user/dashboard":
-        return (
-          <Avatar className="size-10">
-            <AvatarImage src="https://github.com/shadcn.png" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
-        )
-      default:
+      case "/login":
         return null;
+      default:
+        return <Avatar className="size-10">
+          <AvatarImage src="https://github.com/shadcn.png" />
+          <AvatarFallback>CN</AvatarFallback>
+        </Avatar>;
     }
   }
 
