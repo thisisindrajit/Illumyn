@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Card } from "../ui/Card";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface BlockCardProps {
   id: string;
@@ -42,9 +43,9 @@ export const BlockCard = ({
     <Link href={`/block/${id}`}>
       <Card className={cn("overflow-hidden group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02] border-border hover:border-primary/30", className)}>
         {imageUrl ? (
-          <img 
+          <Image 
             src={imageUrl} 
-            alt={title} 
+            alt={title ?? "Image"} 
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (

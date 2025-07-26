@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { APP_NAME } from "../../constants/common";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Session, signOut, useSession } from "@/lib/auth-client";
+import { Session, signOut } from "@/lib/auth-client";
 import { ThemeToggle } from "../theme-toggle";
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import { FC, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface TopBarProps {

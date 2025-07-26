@@ -2,8 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-// import { Metadata } from "next";
-import { APP_NAME, CALLBACK_URL, NEW_USER_CALLBACK_URL } from "@/constants/common";
+import { CALLBACK_URL, NEW_USER_CALLBACK_URL } from "@/constants/common";
 import { signIn } from "@/lib/auth-client";
 import { useState } from "react";
 import { ErrorContext } from "better-auth/react";

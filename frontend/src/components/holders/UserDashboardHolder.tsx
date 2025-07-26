@@ -11,7 +11,7 @@ import {
 } from "@/components";
 
 const UserDashboardHolder = () => {
-    const handleGenerate = async (data: any) => {
+    const handleGenerate = async (data: unknown) => {
         console.log("Generating content with:", data);
         // TODO: Implement content generation logic
     };

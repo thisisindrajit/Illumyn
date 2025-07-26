@@ -18,7 +18,7 @@ interface TrendingSectionProps {
 export const TrendingSection = ({ onShowMore }: TrendingSectionProps) => {
   return (
     <Card className="p-6">
-      <h3 className="text-xl font-bold mb-4">What's happening</h3>
+      <h3 className="text-xl font-bold mb-4">{`What's happening`}</h3>
       <div className="space-y-3">
         {trendingData.map((item) => (
           <TrendingItem
