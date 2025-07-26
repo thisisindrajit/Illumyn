@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
-import { APP_NAME } from "../../constants/common";
+import { APP_NAME, CALLBACK_URL } from "../../constants/common";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Session, signOut } from "@/lib/auth-client";
@@ -115,7 +115,7 @@ const TopBar = ({ session }: TopBarProps) => {
 
   return (
     <div className="w-full flex justify-between items-center">
-      <Link href="/">
+      <Link href={session ? CALLBACK_URL : "/"}>
         <div className="text-sm uppercase tracking-widest border border-foreground/25 h-10 px-4 py-2 animate-fade-in">{APP_NAME}</div>
       </Link>
       <div className="flex items-center gap-3">
