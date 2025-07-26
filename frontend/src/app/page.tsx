@@ -1,7 +1,19 @@
 import { Button } from "@/components/ui/button";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
-const HomePage = () => {
+const HomePage = async () => {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  // If user is authenticated, navigate to dashboard page
+  if (session) {
+    redirect("/user/dashboard");
+  }
+
   return (
     <div className="my-8 flex flex-col w-full gap-6">
       {/* Motto */}
@@ -35,8 +47,8 @@ const HomePage = () => {
             </span>
           </div>
         </div>
-        <Link href="/login">
-          <Button size="xl" className="rounded-full hover:shadow-xl transition-all hover:scale-105 shadow-sm animate-pulse-slow">
+        <Link href="/auth/login">
+          <Button size="xl" className="rounded-full hover:shadow-xl transition-all duration-300 hover:scale-110 hover:shadow-primary/25 shadow-sm animate-pulse-slow hover:animate-glow">
             Start Learning!
           </Button>
         </Link>
