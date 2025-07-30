@@ -1,40 +1,35 @@
 "use client"
 
-import * as React from "react"
+import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 
-export function ThemeToggle() {
+const ThemeToggle = () => {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  React.useEffect(() => {
+  useEffect(() => {
     setMounted(true)
   }, [])
 
   if (!mounted) {
-    return (
-      <Button variant="ghost" size="icon" className="w-9 h-9">
-        <div className="h-4 w-4" />
-      </Button>
-    )
+    return null;
   }
 
   return (
     <Button
       variant="ghost"
-      size="icon"
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      className="w-9 h-9"
+      className="size-10 rounded-full"
     >
       {theme === "light" ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
-          viewBox="0 0 24 24"
+          viewBox="0 0 22 22"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="h-4 w-4"
+          className="h-6 w-6"
         >
           <path
             strokeLinecap="round"
@@ -46,10 +41,10 @@ export function ThemeToggle() {
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
-          viewBox="0 0 24 24"
+          viewBox="0 0 22 22"
           strokeWidth={1.5}
           stroke="currentColor"
-          className="h-4 w-4"
+          className="h-6 w-6"
         >
           <path
             strokeLinecap="round"
@@ -62,3 +57,5 @@ export function ThemeToggle() {
     </Button>
   )
 }
+
+export default ThemeToggle;

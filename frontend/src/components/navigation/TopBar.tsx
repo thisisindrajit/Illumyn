@@ -5,7 +5,7 @@ import { APP_NAME, CALLBACK_URL } from "../../constants/common";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Session, signOut } from "@/lib/auth-client";
-import { ThemeToggle } from "../theme-toggle";
+import ThemeToggle from "../theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
